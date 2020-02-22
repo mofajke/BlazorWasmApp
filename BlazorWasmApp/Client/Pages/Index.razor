@@ -1,0 +1,109 @@
+﻿@page "/"
+@using System.Text
+@using System.Text.Json
+@using BlazorWasmApp.Shared.Auth
+@using BlazorWasmApp.Shared.Auth.models
+@inject HttpClient Http
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+
+<button class="btn btn-primary" @onclick="TakeToken">Take Token</button>
+<br />
+<button class="btn btn-primary" @onclick="UpdateToken">Update Token</button>
+<br />
+<br />
+<p>
+    Token: @TokenToString()
+</p>
+
+@code {
+    private TokenResponse token;
+    private string codeVerifier;
+    private string codeChallenge;
+    private string authCode;
+
+    private async Task TakeToken()
+    {
+        codeVerifier = CodeVerifier.Create();
+        codeChallenge = CodeChallenge.Create(codeVerifier);
+
+        var codeAnswer = await PostAsync<CodeAnswer, CodeChallengeRequest>($"http://localhost:15000/api/Authorization/AuthCode", new CodeChallengeRequest
+        {
+            CodeChallenge = codeChallenge
+        });
+        authCode = codeAnswer.Code;
+
+        token = await PostAsync<TokenResponse, TokenRequest>($"http://localhost:15000/api/Authorization/Token", new TokenRequest
+        {
+            AuthCode = authCode,
+            CodeVerifier = codeVerifier,
+            Login = "alex",
+            Password = "pass"
+        });
+    }
+
+    private async Task UpdateToken()
+    {
+        if (token == null)
+        {
+            return;
+        }
+
+        codeVerifier = CodeVerifier.Create();
+        codeChallenge = CodeChallenge.Create(codeVerifier);
+
+        var codeAnswer = await PostAsync<CodeAnswer, CodeChallengeRequest>($"http://localhost:15000/api/Authorization/AuthCode", new CodeChallengeRequest
+        {
+            CodeChallenge = codeChallenge
+        });
+        authCode = codeAnswer.Code;
+
+        token = await PostAsync<TokenResponse, RefreshTokenRequest>($"http://localhost:15000/api/Authorization/RefreshToken", new RefreshTokenRequest
+        {
+            AuthCode = authCode,
+            CodeVerifier = codeVerifier,
+            ExpiredToken = token.Token,
+            RefreshToken = token.RefreshToken
+        });
+    }
+
+    private string TokenToString()
+    {
+        if (token == null)
+        {
+            return "Нет нихера";
+        }
+
+        return $"{token.RefreshToken} - {token.RefreshTokenExpire} - {token.Token} - {token.TokenExpire}";
+    }
+
+    private async Task<T> GetAsync<T>(string url)
+    {
+        using (var client = new HttpClient())
+        {
+            var response = await client.GetAsync(url);
+            using (var answer = await response.Content.ReadAsStreamAsync())
+            {
+                return await JsonSerializer.DeserializeAsync<T>(answer);
+            }
+        }
+    }
+
+    private async Task<T> PostAsync<T, G>(string url, G obj)
+    {
+        using (var client = new HttpClient())
+        {
+            var json = JsonSerializer.Serialize(obj);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync(url, content);
+            using (var answer = await response.Content.ReadAsStreamAsync())
+            {
+                return await JsonSerializer.DeserializeAsync<T>(answer);
+            }
+        }
+    }
+}

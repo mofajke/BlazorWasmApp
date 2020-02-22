@@ -1,0 +1,1 @@
+﻿select id, username, email from public.Users;

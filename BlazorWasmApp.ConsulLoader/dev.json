@@ -1,0 +1,18 @@
+﻿[
+  {
+    "key": "PostgresConnectionString",
+    "value": "Server=localhost;Port=5432;Database=wasmdb;User Id=postgres;Password=postgres;"
+  },
+  {
+    "key": "RedisConnectionString",
+    "value": "localhost:6379,password=redispass123"
+  },
+  {
+    "key": "CertificateX509FileName",
+    "value": "cert.pfx"
+  },
+  {
+    "key": "CertificateX509Password",
+    "value": "Mofajkew0wz0r2h"
+  }
+]
